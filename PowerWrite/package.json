@@ -1,0 +1,20 @@
+{
+  "name": "power_write",
+  "version": "1.0.0",
+  "description": "A power app for iot-design.gr",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "keywords": [
+    "resin.io",
+    "nodejs",
+    "rpio"
+  ],
+  "dependencies": {     
+    "node-gyp": "^3.7.0", 
+    "rebuild": "^0.1.2", 
+    "rpio": "^0.9.22" 
+  }
+}
