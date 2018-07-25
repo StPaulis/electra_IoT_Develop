@@ -7,10 +7,8 @@ services:
   duHToIoTHub:
     build: ./duHToIoTHub
     privileged: true
-    restart: always
   SpotifyClient:
     build: ./SpotifyClient
-    restart: always
     privileged: true
   SensorDataGet:
     build: ./SensorDataGet
@@ -19,18 +17,11 @@ services:
     privileged: true
   PowerWrite:
     build: ./PowerWrite
-    restart: always
     privileged: true
   PowerRead:
     build: ./PowerRead
-    restart: always
-    privileged: true    
-    devices:
-      - "/dev/i2c-1:/dev/i2c-1"
-      - "/dev/mem:/dev/mem"
-    cap_add: 
-      - SYS_RAWIO
+    privileged: true
   RabbitMQ:
     build: ./RabbitMQ
     network_mode: "host"
-    privileged: true    
+    privileged: true
