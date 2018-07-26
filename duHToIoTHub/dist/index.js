@@ -22,10 +22,36 @@ var connectCallback = function connectCallback(err) {
     });
 
     client.on('message', function (msg) {
-      //logic
+      switch (msg.data) {
+        case "spotify_restart":
+          console.log("spotify_restart");
+          break;
+        case "data_get":
+          console.log("data_get");
+          break;
+        case "data_start":
+          console.log("data_start");
+          break;
+        case "data_stop":
+          console.log("data_stop");
+          break;
+        case "read_start":
+          console.log("read_start");
+          break;
+        case "read_stop":
+          console.log("read_stop");
+          break;
+        case "open":
+          console.log("open");
+          break;
+        case "close":
+          console.log("close");
+        default:
+
+      }
 
       client.complete(msg, function () {
-        console.log('completed');
+        console.log('Message from hub:', msg);
       });
     });
   }
@@ -54,9 +80,10 @@ client.open(connectCallback);
     }, { noAck: true });
   });
   setTimeout(function () {
-    conn.close();process.exit(0);
+    conn.close(); process.exit(0);
   }, 500);
 });
 
 // #endregion
 // #endregion
+process.stdin.resume();

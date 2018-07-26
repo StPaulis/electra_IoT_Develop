@@ -1,4 +1,4 @@
-FROM resin/%%RESIN_MACHINE_NAME%%-node:7-slim
+FROM resin/raspberrypi3-node:7-slim
 
 # Defines our working directory in container
 WORKDIR /usr/src/app

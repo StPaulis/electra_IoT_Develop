@@ -45,13 +45,11 @@ const getMemoryInfo = (socket) => {
 
 io.on('connection', function(socket) {
   'use strict';
-  console.log('a user connected');
   let dataLoop = setInterval(function() {
     getCpuLoad(socket);
     getMemoryInfo(socket);
   }, 1000);
 	socket.on('disconnect', function() {
-      console.log('a user disconnected');
 			clearInterval(dataLoop);
    });
 });

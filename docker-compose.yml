@@ -21,7 +21,7 @@ services:
   PowerRead:
     build: ./PowerRead
     privileged: true
-  RabbitMQ:
-    build: ./RabbitMQ
-    network_mode: "host"
-    privileged: true
+  # RabbitMQ:
+  #   build: ./RabbitMQ
+  #   network_mode: "host"
+  #   privileged: true
