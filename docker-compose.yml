@@ -1,23 +1,23 @@
 version: '2.1'
 services:
-  SensorDataSend:
-    build: ./SensorDataSend
-    network_mode: "host"
-    privileged: true
-  duHToIoTHub:
-    build: ./duHToIoTHub
-    privileged: true
-  SpotifyClient:
-    build: ./SpotifyClient
-    privileged: true
-  SensorDataGet:
-    build: ./SensorDataGet
-    depends_on:
-      - SensorDataSend
-    privileged: true
-  PowerWrite:
-    build: ./PowerWrite
-    privileged: true
+  # SensorDataSend:
+  #   build: ./SensorDataSend
+  #   network_mode: "host"
+  #   privileged: true
+  # duHToIoTHub:
+  #   build: ./duHToIoTHub
+  #   privileged: true
+  # SpotifyClient:
+  #   build: ./SpotifyClient
+  #   privileged: true
+  # SensorDataGet:
+  #   build: ./SensorDataGet
+  #   depends_on:
+  #     - SensorDataSend
+  #   privileged: true
+  # PowerWrite:
+  #   build: ./PowerWrite
+  #   privileged: true
   PowerRead:
     build: ./PowerRead
     privileged: true

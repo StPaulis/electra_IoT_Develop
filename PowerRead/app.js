@@ -1,7 +1,7 @@
 var rpio = require('rpio');
 var array = [
-    3,  5 , //  7,
-    11, 13, 15,
+    //7, 11, 
+    13, 15,
     19, 21, 23,
     29, 8 , 10,
     12, 16, 18,
@@ -17,10 +17,12 @@ array.forEach(x => console.log(`Pin ${x} is currently ` + (rpio.read(x) ? 'high'
 
 function readInput(err) {
     if (err) throw err;
+    console.log('*** Start ***');
     array.forEach(x => console.log(`Pin ${x}: ${rpio.read(x) ? 'high' : 'low'}`));
+    console.log('*** End ***');
 }
 
-setInterval(readInput, 10000);
+setInterval(readInput, 5000);
 
 // // #region onoff
 // const Gpio = require('onoff').Gpio;

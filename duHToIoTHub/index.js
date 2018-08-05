@@ -41,10 +41,11 @@ var connectCallback = function (err) {
           console.log("read_stop");
           break;
         case "open":
-          console.log("open");
+          sendMsg(msg.data);
           break;
         case "close":
-          console.log("close");
+          sendMsg(msg.data);
+          break;
         default:
           console.log("...");
       }
@@ -59,10 +60,10 @@ client.open(connectCallback);
 // #endregion
 
 // #region RabbitMQ
-import { connect } from 'amqplib/callback_api';
+var amqp = require('amqplib/callback_api'); 
 // #region Send
 
-connect(`amqp://${process.env.MONITOR_IP}`, function (err, conn) {
+amqp.connect(`amqp://${process.env.MONITOR_IP}`, function (err, conn) {
   conn.createChannel(function (err, ch) {
     var q = 'power_write';
 
@@ -80,7 +81,7 @@ connect(`amqp://${process.env.MONITOR_IP}`, function (err, conn) {
 });
 
 function sendMsg(msg) {
-  connect(`amqp://${process.env.MONITOR_IP}`, function (err, conn) {
+  amqp.connect(`amqp://${process.env.MONITOR_IP}`, function (err, conn) {
     var q = 'power_write';
 
     ch.assertQueue(q, { durable: false });
