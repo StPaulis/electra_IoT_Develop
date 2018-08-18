@@ -4,24 +4,32 @@ services:
   #   build: ./SensorDataSend
   #   network_mode: "host"
   #   privileged: true
-  # duHToIoTHub:
-  #   build: ./duHToIoTHub
-  #   privileged: true
-  # SpotifyClient:
-  #   build: ./SpotifyClient
-  #   privileged: true
+  duHToIoTHub:
+    build: ./duHToIoTHub
+    privileged: true
+    depends_on:
+      - RabbitMQ 
+  SpotifyClient:
+    build: ./SpotifyClient
+    privileged: true
   # SensorDataGet:
   #   build: ./SensorDataGet
   #   depends_on:
   #     - SensorDataSend
   #   privileged: true
-  # PowerWrite:
-  #   build: ./PowerWrite
-  #   privileged: true
+  PowerWrite:
+    build: ./PowerWrite
+    privileged: true
+    network_mode: "host"
+    depends_on:
+      - RabbitMQ 
   PowerRead:
     build: ./PowerRead
     privileged: true
-  # RabbitMQ:
-  #   build: ./RabbitMQ
-  #   network_mode: "host"
-  #   privileged: true
+    network_mode: "host"
+    depends_on:
+      - RabbitMQ 
+  RabbitMQ:
+    build: ./RabbitMQ
+    network_mode: "host"
+    privileged: true

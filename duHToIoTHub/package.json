@@ -14,6 +14,7 @@
   ],
   "dependencies": {
     "amqplib": "^0.5.2",
-    "azure-iot-device-http": "1.4.3"
+    "azure-iot-device": "^1.4.1",
+    "azure-iot-device-mqtt": "^1.4.1"
   }
 }

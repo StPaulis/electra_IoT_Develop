@@ -5,7 +5,7 @@ ADD rabbitmq.deb rabbitmq.deb
 RUN groupadd -r rabbitmq 
 RUN useradd -r -d /var/lib/rabbitmq -m -g rabbitmq rabbitmq
 
-RUN apt-key adv --keyserver hkps.pool.sks-keyservers.net --recv-keys 0x6B73A36E6026DFCA
+RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys 434975BD900CCBE4F7EE1B1ED208507CA14F4FCA
 
 RUN echo 'deb http://packages.erlang-solutions.com/debian wheezy contrib' > /etc/apt/sources.list.d/erlang.list
 
@@ -19,7 +19,6 @@ RUN apt-get update -y &&\
 RUN dpkg -i rabbitmq.deb
 
 RUN rabbitmq-plugins enable rabbitmq_management
-
 
 # get logs to stdout (thanks @dumbbell for pushing this upstream! :D)
 ENV RABBITMQ_LOGS=- RABBITMQ_SASL_LOGS=-

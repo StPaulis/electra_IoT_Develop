@@ -1,42 +1,103 @@
-var rpio = require('rpio');
-var array = [
-    //7, 11, 
-    13, 15,
-    19, 21, 23,
-    29, 8 , 10,
-    12, 16, 18,
-    22, 24, 26,
-    31, 33, 35,
-    37, 38, 40,
-    36, 32,
-];
+var amqp = require('amqplib/callback_api');
+const axios = require('axios');
+const Gpio = require('onoff').Gpio;
 
-array.forEach(x => rpio.open(x, rpio.INPUT, rpio.PULL_DOWN));
+// #region init
 
-array.forEach(x => console.log(`Pin ${x} is currently ` + (rpio.read(x) ? 'high' : 'low')));
+var pins = [];
+const nodeId = process.env.NODE_ID;
+// const nodeId = 5;
 
-function readInput(err) {
-    if (err) throw err;
-    console.log('*** Start ***');
-    array.forEach(x => console.log(`Pin ${x}: ${rpio.read(x) ? 'high' : 'low'}`));
-    console.log('*** End ***');
+// axios.get(`http://stpaulis-app.azurewebsites.net/api/NodePin/node/${nodeId}/write`)
+console.log('Initializing node: ', nodeId);
+
+axios.get(`http://192.168.1.8:2853/api/NodePin/node/5/read`)
+    .then(function (response) {
+        console.log('Initial data:' + response.data);
+        response.data.forEach(function (nodePin) {
+            pins.push({gpio: selectWatcher(nodePin), status: 0});
+            const _status = pins.filter(x => x.gpio._gpio === nodePin)[0].gpio.readSync();
+            pins.filter(x => x.gpio._gpio === nodePin)[0].status = _status;
+            sendToRmq({
+                id: nodePin,
+                status: _status === 1 ? true : false ,
+                service: 'Power_Read',
+                nodeId: nodeId
+            });
+            watcherStart(pins.filter(x => x.gpio._gpio === nodePin)[0].gpio);
+        });
+    })
+    .catch(function (error) {
+        console.log('Error when started' + error);
+    });
+
+console.log('Initialized');
+// #endregion
+
+
+function selectWatcher(pin) {
+    return new Gpio(pin, 'in', 'both', 'both');
 }
 
-setInterval(readInput, 5000);
+function watcherStart(gpio) {
+    gpio.watch((err, value) => {
+        if (err) {
+            throw err;
+        }
 
-// // #region onoff
-// const Gpio = require('onoff').Gpio;
+        console.log(`Pin ${gpio._gpio} changed, New value: ${value}`);
+        sendToRmq({
+            id: gpio._gpio,
+            status: value === 1 ? true : false,
+            service: 'Power_Read',
+            nodeId: nodeId
+        });
+    });
+}
 
-// const button = new Gpio(4, 'in', 'both');
-// button.watch(function (err, value) {
-//     if (err) {
-//       throw err;
-//     }
+function sendToRmq(model) {
+    
+    const _LastStatus = pins.filter(x => x.gpio._gpio === model.id)[0].status;
+    if(model.status === _LastStatus) return;
 
-//     console.log`Message to RMQ: ${value}`;
-//   });
-//   process.on('SIGINT', function () {
-//     led.unexport();
-//     button.unexport();
-//   });
-// // #endregion
+    pins.filter(x => x.gpio._gpio === model.id)[0].status = model.status;
+
+    var newMsg = JSON.stringify(model);
+    amqp.connect(`amqp://${process.env.MONITOR_IP}`, function (err, conn) {
+    // amqp.connect(`amqp://localhost`, function (err, conn) {
+        conn.createChannel(function (err, ch) {
+            var q = 'Server';
+
+            ch.assertQueue(q, { durable: false });
+            // Note: on Node 6 Buffer.from(msg) should be used
+            ch.sendToQueue(q, new Buffer.from(newMsg));
+            console.log(" [x] Sent Message to Server:" + newMsg);
+
+            setTimeout(function () { conn.close(); }, 500);
+        });
+    });
+}
+
+// #region Safely closing
+function exitHandler(options, err) {
+    if (options.cleanup) {
+        pins.forEach(x => x.unexport());
+    }
+    if (err) console.log(err.stack);
+    if (options.exit) process.exit();
+}
+
+//do something when app is closing
+process.on('exit', exitHandler.bind(null, { cleanup: true }));
+
+//catches ctrl+c event
+process.on('SIGINT', exitHandler.bind(null, { exit: true }));
+
+// catches "kill pid" (for example: nodemon restart)
+process.on('SIGUSR1', exitHandler.bind(null, { exit: true }));
+process.on('SIGUSR2', exitHandler.bind(null, { exit: true }));
+
+//catches uncaught exceptions
+process.on('uncaughtException', exitHandler.bind(null, { exit: true }));
+
+// #endregion

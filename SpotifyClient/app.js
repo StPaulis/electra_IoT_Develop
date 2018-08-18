@@ -1,9 +1,9 @@
-var exec = require('child_process').exec;
+var exec = require('child_process').execSync;
 const fs = require('fs');
 
 function execString(msg) {
   exec(msg,
-    function (error, stdout, stderr) {
+    function (error) {
       if (error !== null) {
         console.log('exec error: ' + error);
       }
@@ -13,6 +13,7 @@ function execString(msg) {
 
 function restart() {
   execString('systemctl restart raspotify');
+  execString('systemctl enable raspotify');
 };
 
 fs.appendFileSync('/etc/default/raspotify', 
