@@ -37,7 +37,7 @@ client.open(connectCallback);
 
 // #region RabbitMQ
 
-amqp.connect(`amqp://${process.env.MONITOR_IP}`, function (err, conn) {
+amqp.connect(`amqp://${process.env.RMQ_IP}`, function (err, conn) {
 // amqp.connect(`amqp://localhost`, function (err, conn) {
   conn.createChannel(function (err, ch) {
     var q = 'Server';
@@ -52,7 +52,7 @@ amqp.connect(`amqp://${process.env.MONITOR_IP}`, function (err, conn) {
 });
 
 function send2Rmq(msg) {
-  amqp.connect(`amqp://${process.env.MONITOR_IP}`, function (err, conn) {
+  amqp.connect(`amqp://${process.env.RMQ_IP}`, function (err, conn) {
   // amqp.connect(`amqp://localhost`, function (err, conn) {
     conn.createChannel(function (err, ch) {
       var q = '';

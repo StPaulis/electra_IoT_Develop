@@ -6,12 +6,11 @@ const Gpio = require('onoff').Gpio;
 
 var pins = [];
 const nodeId = process.env.NODE_ID;
-// const nodeId = 5;
+const server_url = process.env.SERVER_URL;
 
-// axios.get(`http://stpaulis-app.azurewebsites.net/api/NodePin/node/${nodeId}/write`)
 console.log('Initializing node: ', nodeId);
 
-axios.get(`http://192.168.1.8:2853/api/NodePin/node/5/read`)
+axios.get(`http://${server_url}/api/NodePin/node/${nodeId}/read`)
     .then(function (response) {
         console.log('Initial data:' + response.data);
         response.data.forEach(function (nodePin) {
@@ -29,6 +28,7 @@ axios.get(`http://192.168.1.8:2853/api/NodePin/node/5/read`)
     })
     .catch(function (error) {
         console.log('Error when started' + error);
+        throw "No connection with server";
     });
 
 console.log('Initialized');
@@ -63,7 +63,7 @@ function sendToRmq(model) {
     pins.filter(x => x.gpio._gpio === model.id)[0].status = model.status;
 
     var newMsg = JSON.stringify(model);
-    amqp.connect(`amqp://${process.env.MONITOR_IP}`, function (err, conn) {
+    amqp.connect(`amqp://${process.env.RMQ_IP}`, function (err, conn) {
     // amqp.connect(`amqp://localhost`, function (err, conn) {
         conn.createChannel(function (err, ch) {
             var q = 'Server';
