@@ -31,7 +31,7 @@ console.log('Initialized');
 amqp.connect(`amqp://${process.env.RMQ_IP}`, function (err, conn) {
     // amqp.connect(`amqp://localhost`, function (err, conn) {
     conn.createChannel(function (err, ch) {
-        var q = 'Power_Write';
+        var q = `Power_Write:${nodeId}`;
 
         ch.assertQueue(q, { durable: false });
         // Note: on Node 6 Buffer.from(msg) should be used 
@@ -77,7 +77,6 @@ function handlePin(model) {
     } else {
         blink(model.Status, model.Id);
     }
-    pins.filter(x => x._gpio === model.Id)[0].writeSync(model.Status ? 1 : 0);
     console.log('Wrote:', model);
 }
 
