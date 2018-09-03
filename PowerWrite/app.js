@@ -10,41 +10,45 @@ const server_url = process.env.SERVER_URL;
 
 console.log('Initializing node: ', nodeId);
 
-axios.get(`http://${server_url}/api/NodePin/node/${nodeId}/write`)
-    .then(function (response) {
-        console.log(response.data);
-        response.data.forEach(function (nodePin) {
-            pins.push(new Gpio(nodePin.controllerPin, 'out'));
-            pins.filter(x => x._gpio === nodePin.controllerPin)[0].writeSync(nodePin.status ? 1 : 0);
-        });
-        init = true;
-    })
-    .catch(function (error) {
-        console.log('Error when started' + error);
-        throw "No connection with server";
-    });
+initializeApp();
 
-console.log('Initialized');
+function initializeApp() {
+    axios.get(`http://${server_url}/api/NodePin/node/${nodeId}/write`)
+        .then(function (response) {
+            console.log(response.data);
+            response.data.forEach(function (nodePin) {
+                pins.push(new Gpio(nodePin.controllerPin, 'out'));
+                pins.filter(x => x._gpio === nodePin.controllerPin)[0].writeSync(nodePin.status ? 1 : 0);
+            });
+            connectAsRabbitMqReceiver();
+            console.log('Initialized Write');
+        }).catch(function (error) {
+            console.log('Error when started' + error);
+            setTimeout(function () { initializeApp(); }, 5000);
+        });
+
+}
 // #endregion
 
 // #region rmq
-amqp.connect(`amqp://${process.env.RMQ_IP}`, function (err, conn) {
-    // amqp.connect(`amqp://localhost`, function (err, conn) {
-    conn.createChannel(function (err, ch) {
-        var q = `Power_Write:${nodeId}`;
+function connectAsRabbitMqReceiver() {
+    amqp.connect(`amqp://${process.env.RMQ_IP}`, function (err, conn) {
+        // amqp.connect(`amqp://localhost`, function (err, conn) {
+        conn.createChannel(function (err, ch) {
+            var q = `Power_Write:${nodeId}`;
 
-        ch.assertQueue(q, { durable: false });
-        // Note: on Node 6 Buffer.from(msg) should be used 
-        console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q);
-        ch.consume(q, function (msg) {
-            console.log(" [x] Received to Write %s", msg.content.toString());
-            consumer(bin2string(msg.content));
-        }, { noAck: true });
+            ch.assertQueue(q, { durable: false });
+            // Note: on Node 6 Buffer.from(msg) should be used 
+            console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q);
+            ch.consume(q, function (msg) {
+                console.log(" [x] Received to Write %s", msg.content.toString());
+                consumer(bin2string(msg.content));
+            }, { noAck: true });
+        });
     });
-});
+}
 
 function consumer(msg) {
-
     var model = JSON.parse(msg);
     try {
         handlePin(model);
@@ -73,7 +77,7 @@ function consumer(msg) {
 function handlePin(model) {
     if (model.PinModeId === 4) {
         blink(true, model.Id);
-        setTimeout(function() { blink(false, model.Id) }, 100);
+        setTimeout(function () { blink(false, model.Id) }, 100);
     } else {
         blink(model.Status, model.Id);
     }

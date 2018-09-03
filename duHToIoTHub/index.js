@@ -18,7 +18,7 @@ var connectCallback = function (err) {
     client.on('message', function (msg) {
       send2Rmq(bin2string(msg.data));
       client.complete(msg, function () {
-        console.log('completed');
+        console.log('Receive Msg from IoT Hub' + bin2string(msg.data));
       });
     });
   }
@@ -29,7 +29,7 @@ function Send2IotHub(bytes) {
   client.sendEvent(message, function (err) {
     if (err) console.log(err.toString());
   });
-  console.log(bin2string(bytes));
+  console.log('Send to IoT Hub' + bin2string(bytes));
 }
 
 client.open(connectCallback);
@@ -66,7 +66,7 @@ function send2Rmq(msg) {
       ch.assertQueue(q, { durable: false });
       // Note: on Node 6 Buffer.from(msg) should be used
       ch.sendToQueue(q, new Buffer.from(msg));
-      console.log(`[x] Sent '${msg}' to Client:`);
+      console.log(`[x] Send '${msg}' to q '${q}'`);
 
       setTimeout(function () { conn.close(); }, 500);
     });

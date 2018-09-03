@@ -15,7 +15,6 @@
   "dependencies": {
     "node-gyp": "^3.7.0", 
     "rebuild": "^0.1.2", 
-    "rpio": "^0.9.22",
     "onoff": "^3.2.0",
     "amqplib": "^0.5.2",
     "axios": "^0.16.2"

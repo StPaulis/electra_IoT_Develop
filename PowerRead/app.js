@@ -10,28 +10,33 @@ const server_url = process.env.SERVER_URL;
 
 console.log('Initializing node: ', nodeId);
 
-axios.get(`http://${server_url}/api/NodePin/node/${nodeId}/read`)
-    .then(function (response) {
-        console.log('Initial data:' + response.data);
-        response.data.forEach(function (nodePin) {
-            pins.push({gpio: selectWatcher(nodePin), status: 0});
-            const _status = pins.filter(x => x.gpio._gpio === nodePin)[0].gpio.readSync();
-            pins.filter(x => x.gpio._gpio === nodePin)[0].status = _status;
-            sendToRmq({
-                id: nodePin,
-                status: _status === 1 ? true : false ,
-                service: 'Power_Read',
-                nodeId: nodeId
-            });
-            watcherStart(pins.filter(x => x.gpio._gpio === nodePin)[0].gpio);
-        });
-    })
-    .catch(function (error) {
-        console.log('Error when started' + error);
-        throw "No connection with server";
-    });
+initializeApp();
 
 console.log('Initialized');
+
+function initializeApp() {
+    axios.get(`http://${server_url}/api/NodePin/node/${nodeId}/read`)
+        .then(function (response) {
+            console.log('Initial data:' + response.data);
+            response.data.forEach(function (nodePin) {
+                pins.push({ gpio: selectWatcher(nodePin), status: 0 });
+                const _status = pins.filter(x => x.gpio._gpio === nodePin)[0].gpio.readSync();
+                pins.filter(x => x.gpio._gpio === nodePin)[0].status = _status;
+                sendToRmq({
+                    id: nodePin,
+                    status: _status === 1 ? true : false,
+                    service: 'Power_Read',
+                    nodeId: nodeId
+                });
+                watcherStart(pins.filter(x => x.gpio._gpio === nodePin)[0].gpio);
+                console.log('Initialized Read');
+            });
+        })
+        .catch(function (error) {
+            console.log('Error when started' + error);
+            setTimeout(function () { initializeApp(); }, 5000);
+        });
+}
 // #endregion
 
 
@@ -56,15 +61,15 @@ function watcherStart(gpio) {
 }
 
 function sendToRmq(model) {
-    
+
     const _LastStatus = pins.filter(x => x.gpio._gpio === model.id)[0].status;
-    if(model.status === _LastStatus) return;
+    if (model.status === _LastStatus) return;
 
     pins.filter(x => x.gpio._gpio === model.id)[0].status = model.status;
 
     var newMsg = JSON.stringify(model);
     amqp.connect(`amqp://${process.env.RMQ_IP}`, function (err, conn) {
-    // amqp.connect(`amqp://localhost`, function (err, conn) {
+        // amqp.connect(`amqp://localhost`, function (err, conn) {
         conn.createChannel(function (err, ch) {
             var q = 'Server';
 
