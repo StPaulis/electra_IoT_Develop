@@ -7,6 +7,7 @@ const Gpio = require('onoff').Gpio;
 var pins = [];
 const nodeId = process.env.NODE_ID;
 const server_url = process.env.SERVER_URL;
+let boilerStatus = true;
 
 console.log('Initializing node: ', nodeId);
 
@@ -19,12 +20,15 @@ function initializeApp() {
             response.data.forEach(function (nodePin) {
                 pins.push(new Gpio(nodePin.controllerPin, 'out'));
                 pins.filter(x => x._gpio === nodePin.controllerPin)[0].writeSync(nodePin.status ? 1 : 0);
+                if (nodePin.pinModeId === 4 ) {
+                    boilerStatus = nodePin.status;
+                }
             });
             connectAsRabbitMqReceiver();
             console.log('Initialized Write');
         }).catch(function (error) {
-            console.log('Error when started' + error);
-            setTimeout(function () { initializeApp(); }, 5000);
+            console.log('=-==-==-=-==-=-==-=-= Error while starting Writing =-==-==-=-==-=-==-=-=' + error);
+            throw "No connection with server";
         });
 
 }
@@ -76,8 +80,8 @@ function consumer(msg) {
 
 function handlePin(model) {
     if (model.PinModeId === 4) {
-        blink(true, model.Id);
-        setTimeout(function () { blink(false, model.Id) }, 100);
+        blink(!boilerStatus, model.Id);
+        setTimeout(function () { blink(boilerStatus, model.Id) }, 75);
     } else {
         blink(model.Status, model.Id);
     }

@@ -33,8 +33,8 @@ function initializeApp() {
             });
         })
         .catch(function (error) {
-            console.log('Error when started' + error);
-            setTimeout(function () { initializeApp(); }, 5000);
+            console.log('=-==-==-=-==-=-==-=-= Error while starting Reading =-==-==-=-==-=-==-=-=' + error);
+            throw "No connection with server";
         });
 }
 // #endregion

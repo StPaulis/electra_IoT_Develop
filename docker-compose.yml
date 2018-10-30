@@ -22,7 +22,8 @@ services:
     privileged: true
     network_mode: "host"
     depends_on:
-      - RabbitMQ 
+      - RabbitMQ
+      - PowerRead 
   PowerRead:
     build: ./PowerRead
     privileged: true
