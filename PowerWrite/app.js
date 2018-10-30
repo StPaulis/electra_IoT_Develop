@@ -7,6 +7,7 @@ const Gpio = require('onoff').Gpio;
 var pins = [];
 const nodeId = process.env.NODE_ID;
 const server_url = process.env.SERVER_URL;
+const rmqIp = process.env.RMQ_IP;
 let boilerStatus = true;
 
 console.log('Initializing node: ', nodeId);
@@ -36,7 +37,7 @@ function initializeApp() {
 
 // #region rmq
 function connectAsRabbitMqReceiver() {
-    amqp.connect(`amqp://${process.env.RMQ_IP}`, function (err, conn) {
+    amqp.connect(`amqp://${rmqIp}`, function (err, conn) {
         // amqp.connect(`amqp://localhost`, function (err, conn) {
         conn.createChannel(function (err, ch) {
             var q = `Power_Write:${nodeId}`;
@@ -63,7 +64,7 @@ function consumer(msg) {
     model.NodeId = nodeId;
     var newMsg = JSON.stringify(model);
 
-    amqp.connect(`amqp://${process.env.RMQ_IP}`, function (err, conn) {
+    amqp.connect(`amqp://${rmqIp}`, function (err, conn) {
         // amqp.connect(`amqp://localhost`, function (err, conn) {
         conn.createChannel(function (err, ch) {
             var q = 'Server';
