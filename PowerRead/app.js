@@ -8,7 +8,7 @@ var pins = [];
 const nodeId = process.env.NODE_ID;
 const server_url = process.env.SERVER_URL;
 
-console.log('Initializing node: ', nodeId);
+console.log('Initializing node: '+ nodeId);
 
 initializeApp();
 
