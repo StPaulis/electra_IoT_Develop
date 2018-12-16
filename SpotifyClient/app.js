@@ -8,7 +8,7 @@ function execString(msg) {
         console.log('exec error: ' + error);
       }
     });
-  console.log(`exec: ${msg}`)
+  console.log(`Executed: ${msg}`)
 }
 
 function restart() {
@@ -24,4 +24,3 @@ OPTIONS="--username ${process.env.USERNAME} --password ${process.env.PASSWORD}"
 `);
 
 restart();
-setInterval(restart, 21600000);
