@@ -17,19 +17,12 @@ services:
   #   depends_on:
   #     - SensorDataSend
   #   privileged: true
-  PowerWrite:
-    build: ./PowerWrite
+  Power:
+    build: ./Power
     privileged: true
     network_mode: "host"
     depends_on:
       - RabbitMQ
-      - PowerRead 
-  PowerRead:
-    build: ./PowerRead
-    privileged: true
-    network_mode: "host"
-    depends_on:
-      - RabbitMQ 
   RabbitMQ:
     build: ./RabbitMQ
     network_mode: "host"
