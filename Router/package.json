@@ -1,20 +1,18 @@
 {
-  "name": "iot_hub",
+  "name": "router",
   "version": "1.0.0",
-  "description": "iot hub <3 node.js",
+  "description": "simple Electra's router",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js"
   },
   "keywords": [
-    "resin.io",
-    "iot-hub",
+    "balena.io",
+    "rabbitmq",
     "nodejs"
   ],
   "dependencies": {
-    "amqplib": "^0.5.2",
-    "azure-iot-device": "^1.4.1",
-    "azure-iot-device-mqtt": "^1.4.1"
+    "amqplib": "^0.5.2"
   }
 }

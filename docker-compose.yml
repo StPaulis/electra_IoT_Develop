@@ -1,22 +1,13 @@
 version: '2.1'
 services:
-  # SensorDataSend:
-  #   build: ./SensorDataSend
-  #   network_mode: "host"
-  #   privileged: true
-  duHToIoTHub:
-    build: ./duHToIoTHub
+  Router:
+    build: ./Router
     privileged: true
     depends_on:
       - RabbitMQ 
   SpotifyClient:
     build: ./SpotifyClient
     privileged: true
-  # SensorDataGet:
-  #   build: ./SensorDataGet
-  #   depends_on:
-  #     - SensorDataSend
-  #   privileged: true
   Power:
     build: ./Power
     privileged: true
