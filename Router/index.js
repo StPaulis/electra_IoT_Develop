@@ -2,7 +2,9 @@ var amqp = require('amqplib/callback_api');
 
 const RMQ_IP = process.env.RMQ_IP || 'localhost';
 const DEVICE_NAME = process.env.DEVICE_NAME;
-const RMQ_IPV6 = process.env.DEVICE_NAME;
+const RMQ_IPV6 = process.env.RMQ_IPV6;
+const RMQ_PASSWORD = process.env.RMQ_PASSWORD;
+const RMQ_USERNAME = process.env.RMQ_USERNAME;
 
 watchCloud();
 watchHome();
