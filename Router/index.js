@@ -9,7 +9,7 @@ watchHome();
 
 function watchCloud() {
   amqp.connect(`amqp://${RMQ_USERNAME}:${RMQ_PASSWORD}@${RMQ_IPV6}`, function (err, conn) {
-    handleError(err, conn);
+    handleError(err, conn, watchCloud);
     try {
       conn.createChannel(function (err, ch) {
         var q = DEVICE_NAME;
@@ -39,6 +39,8 @@ function watchCloud() {
 
 function watchHome() {
   amqp.connect(`amqp://${RMQ_IP}`, function (err, conn) {
+    handleError(err, conn, watchHome);
+
     // amqp.connect(`amqp://localhost`, function (err, conn) {
     conn.createChannel(function (err, ch) {
       var q = 'Server';
@@ -61,7 +63,7 @@ function watchHome() {
 function SendToCloud(bytes) {
   // https://www.rabbitmq.com/tutorials/tutorial-two-javascript.html
   amqp.connect(`amqp://${RMQ_USERNAME}:${RMQ_PASSWORD}@${RMQ_IPV6}`, function (err, conn) {
-    handleError(err, conn);
+    handleError(err, conn, SendToCloud(bytes));
     try {
       conn.createChannel(function (err, ch) {
 
@@ -89,6 +91,7 @@ function SendToCloud(bytes) {
 
 function sendToHome(msg) {
   amqp.connect(`amqp://${RMQ_IP}`, function (err, conn) {
+    handleError(err, conn, sendToHome(msg));
     // amqp.connect(`amqp://localhost`, function (err, conn) {
     conn.createChannel(function (err, ch) {
       var q = '';
@@ -113,15 +116,15 @@ function sendToHome(msg) {
   });
 }
 
-function handleError(err, conn) {
+function handleError(err, conn, watchCallback) {
   if (err) {
     console.log(err);
-    return setTimeout(watchCloud, 1000);
+    return setTimeout(watchCallback, 1000);
   }
 
   if (err) {
     console.error("[AMQP]", err.message);
-    return setTimeout(watchCloud, 1000);
+    return setTimeout(watchCallback, 1000);
   }
   conn.on("error", function (err) {
     if (err.message !== "Connection closing") {
@@ -130,7 +133,7 @@ function handleError(err, conn) {
   });
   conn.on("close", function () {
     console.error("[AMQP] reconnecting");
-    return setTimeout(watchCloud, 1000);
+    return setTimeout(watchCallback, 1000);
   });
 }
 
