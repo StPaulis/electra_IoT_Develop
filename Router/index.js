@@ -31,8 +31,8 @@ function watchCloud() {
         });
       });
     } catch (error) {
-      console.log(err);
-      throw
+      console.log(error);
+      watchCloud();
     }
   });
 }
@@ -40,28 +40,30 @@ function watchCloud() {
 function watchHome() {
   amqp.connect(`amqp://${RMQ_IP}`, function (err, conn) {
     handleError(err, conn, watchHome);
+    try {
+      conn.createChannel(function (err, ch) {
+        var q = 'Server';
 
-    // amqp.connect(`amqp://localhost`, function (err, conn) {
-    conn.createChannel(function (err, ch) {
-      var q = 'Server';
-
-      ch.assertQueue(q, {
-        durable: false
+        ch.assertQueue(q, {
+          durable: false
+        });
+        // Note: on Node 6 Buffer.from(msg) should be used
+        ch.consume(q, function (msg) {
+          console.log(" [Received To Router from Home] %s", msg.content.toString());
+          SendToCloud(msg.content);
+        }, {
+          noAck: true
+        });
       });
-      // Note: on Node 6 Buffer.from(msg) should be used
-      ch.consume(q, function (msg) {
-        console.log(" [Received To Router from Home] %s", msg.content.toString());
-        SendToCloud(msg.content);
-      }, {
-        noAck: true
-      });
-    });
+    } catch (error) {
+      console.log(error);
+      watchHome();
+    }
   });
 }
 
 // Helpers
 function SendToCloud(bytes) {
-  // https://www.rabbitmq.com/tutorials/tutorial-two-javascript.html
   amqp.connect(`amqp://${RMQ_USERNAME}:${RMQ_PASSWORD}@${RMQ_IPV6}`, function (err, conn) {
     handleError(err, conn, SendToCloud(bytes));
     try {
@@ -83,8 +85,7 @@ function SendToCloud(bytes) {
         process.exit(0)
       }, 500);
     } catch (error) {
-      console.log(err);
-      throw
+      console.log(error);
     }
   });
 }
@@ -92,27 +93,30 @@ function SendToCloud(bytes) {
 function sendToHome(msg) {
   amqp.connect(`amqp://${RMQ_IP}`, function (err, conn) {
     handleError(err, conn, sendToHome(msg));
-    // amqp.connect(`amqp://localhost`, function (err, conn) {
-    conn.createChannel(function (err, ch) {
-      var q = '';
+    try {
+      conn.createChannel(function (err, ch) {
+        var q = '';
 
-      try {
-        q = JSON.parse(msg).Service;
-      } catch (error) {
-        console.log(error);
-      };
+        try {
+          q = JSON.parse(msg).Service;
+        } catch (error) {
+          console.log(error);
+        };
 
-      ch.assertQueue(q, {
-        durable: false
+        ch.assertQueue(q, {
+          durable: false
+        });
+        // Note: on Node 6 Buffer.from(msg) should be used
+        ch.sendToQueue(q, new Buffer.from(msg));
+        console.log(`[Router to Home] Sent '${msg}' to ${q}:`);
+
+        setTimeout(function () {
+          conn.close();
+        }, 500);
       });
-      // Note: on Node 6 Buffer.from(msg) should be used
-      ch.sendToQueue(q, new Buffer.from(msg));
-      console.log(`[Router to Home] Sent '${msg}' to ${q}:`);
-
-      setTimeout(function () {
-        conn.close();
-      }, 500);
-    });
+    } catch (error) {
+      console.log(error);
+    }
   });
 }
 
