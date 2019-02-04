@@ -3,6 +3,7 @@ services:
   Router:
     build: ./Router
     privileged: true
+    network_mode: "host"
     depends_on:
       - RabbitMQ 
   SpotifyClient:
