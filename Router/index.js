@@ -34,7 +34,9 @@ function watchCloud() {
       });
     } catch (error) {
       console.log(error);
-      watchCloud();
+      setTimeout(function () {
+        watchCloud();
+      }, 500);
     }
   });
 }
@@ -59,7 +61,9 @@ function watchHome() {
       });
     } catch (error) {
       console.log(error);
-      watchHome();
+      setTimeout(function () {
+        watchHome();
+      }, 500);
     }
   });
 }
