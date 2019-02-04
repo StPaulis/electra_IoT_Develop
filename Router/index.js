@@ -10,7 +10,7 @@ watchCloud();
 watchHome();
 
 function watchCloud() {
-  amqp.connect(`amqp://${RMQ_USERNAME}:${RMQ_PASSWORD}@${RMQ_IPV6}:5672/`, function (err, conn) {
+  amqp.connect(`amqp://${RMQ_USERNAME}:${RMQ_PASSWORD}@${RMQ_IPV6}/?heartbeat=5`, function (err, conn) {
     handleError(err, conn, watchCloud);
     conn.createChannel(function (err, ch) {
       var q = DEVICE_NAME;
