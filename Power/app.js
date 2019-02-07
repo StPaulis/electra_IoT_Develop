@@ -218,7 +218,7 @@ function exit() {
   if (IS_PROD && pinWriters) {
     pinWriters.forEach(x => x.gpio.unexport());
   }
-  process.exit();
+  process.exit(0);
 }
 
 //do something when app is closing

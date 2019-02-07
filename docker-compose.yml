@@ -4,6 +4,8 @@ services:
     build: ./Router
     privileged: true
     network_mode: "host"
+    expose: 
+      - "5672"
     depends_on:
       - RabbitMQ 
   SpotifyClient:
