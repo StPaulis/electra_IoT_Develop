@@ -6,7 +6,7 @@ const nodeId = process.env.NODE_ID || 7;
 const server_url = process.env.SERVER_URL || 'localhost:2853';
 const RMQ_IP = process.env.RMQ_IP || 'localhost'
 const IS_PROD = process.env.IS_PROD || false;
-
+const DELAY = 3000;
 var pinReaders = [];
 var pinWriters = [];
 let boilerStatus = true;
@@ -19,8 +19,11 @@ function initPower() {
       console.log('Writer Initial data:' + JSON.stringify(response.data));
       response.data.forEach(function (nodePin) {
 
-        if (IS_PROD ) {
-          pinWriters.push({ gpio: new Gpio(nodePin.controllerPin, 'out'), pin: nodePin.controllerPin });
+        if (IS_PROD) {
+          pinWriters.push({
+            gpio: new Gpio(nodePin.controllerPin, 'out'),
+            pin: nodePin.controllerPin
+          });
         } else {
 
           let virtualGpio = {
@@ -29,11 +32,14 @@ function initPower() {
             }
           };
 
-          pinWriters.push({ gpio: virtualGpio, pin: nodePin.controllerPin } );
+          pinWriters.push({
+            gpio: virtualGpio,
+            pin: nodePin.controllerPin
+          });
         }
-        if (nodePin.pinModeId === 4 ) {
+        if (nodePin.pinModeId === 4) {
           boilerStatus = nodePin.status;
-      }
+        }
         blink(nodePin.status, nodePin.controllerPin);
       });
       initPowerRead();
@@ -107,7 +113,7 @@ function initGpioReader(gpio) {
 }
 
 function getGpioReader(pin) {
-  if (IS_PROD ) {
+  if (IS_PROD) {
     return new Gpio(pin, 'in', 'both', 'both');
   } else {
     let virtualGpio = {
@@ -123,24 +129,28 @@ function getGpioReader(pin) {
   }
 }
 
-function subscribeWritersToRMQ () {
+function subscribeWritersToRMQ() {
   amqp.connect(`amqp://${RMQ_IP}`, function (err, conn) {
-    if (!conn) exit();
-    conn.createChannel(function (err, ch) {
-      var q = `Power_Write:${nodeId}`;
-  
-      ch.assertQueue(q, {
-        durable: false
-      });
+    setTimeout(function () {
+      handleError(err, conn, subscribeWritersToRMQ);
+    }, DELAY);
 
-      ch.consume(q, function (msg) {
-        console.log(" [x] Received From Home Server to Power Write %s", msg.content.toString());
-        receiveFromRmqToWrite(bin2string(msg.content));
-      }, {
-        noAck: true
-      });
+    if (conn) {
+      conn.createChannel(function (err, ch) {
+        var q = `Power_Write:${nodeId}`;
 
-    });
+        ch.assertQueue(q, {
+          durable: false
+        });
+
+        ch.consume(q, function (msg) {
+          console.log(" [x] Received From Home Server to Power Write %s", msg.content.toString());
+          receiveFromRmqToWrite(bin2string(msg.content));
+        }, {
+          noAck: true
+        });
+      });
+    }
   });
 }
 
@@ -243,5 +253,36 @@ process.on('SIGUSR2', exitHandler.bind(null, {
 process.on('uncaughtException', exitHandler.bind(null, {
   exit: true
 }));
+
+
+function handleError(err, conn, watchCallback) {
+  console.log(`[AMQP] New conncetion with errors |${err ? err : ''}`);
+
+  if (conn) {
+    console.log(
+      `[AMQP] Connected with callback ${watchCallback
+        .toString()
+        .substring(0, 21)}`
+    );
+
+    conn.on('error', function (err) {
+      console.error('[AMQP CONN ERROR]', err.message);
+    });
+
+    conn.on('close', function (err) {
+      console.error('[AMQP ON CLOSE] code: ', err.code);
+      if (err.code.includes('ECONNRESET')) {
+        console.log('[AMQP ON RECONNECT]');
+        conn.close();
+        watchCallback();
+      }
+    });
+  } else {
+    if (err) {
+      console.error('[AMQP NO CONN ERROR]', err.message);
+      watchCallback();
+    }
+  }
+}
 
 // #endregion
