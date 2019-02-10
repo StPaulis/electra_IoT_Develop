@@ -6,7 +6,6 @@ const nodeId = process.env.NODE_ID || 7;
 const server_url = process.env.SERVER_URL || 'localhost:2853';
 const RMQ_IP = process.env.RMQ_IP || 'localhost'
 const IS_PROD = process.env.IS_PROD || false;
-const DELAY = 3000;
 var pinReaders = [];
 var pinWriters = [];
 let boilerStatus = true;
@@ -141,7 +140,9 @@ function subscribeWritersToRMQ() {
         channel.assertQueue(`Power_Write:${nodeId}`, {
           durable: false
         }),
-        channel.consume(`Power_Write:${nodeId}`, receiveFromRmqToWrite(bin2string(msg.content)), {
+        channel.consume(`Power_Write:${nodeId}`, function (msg) {
+          receiveFromRmqToWrite(bin2string(msg.content))
+        }, {
           noAck: true
         })
       ])
