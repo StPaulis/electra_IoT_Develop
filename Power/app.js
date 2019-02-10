@@ -1,4 +1,4 @@
-const amqp = require('amqplib/callback_api');
+const amqp = require('amqp-connection-manager');
 const axios = require('axios');
 var Gpio = require('onoff').Gpio;
 
@@ -10,6 +10,7 @@ const DELAY = 3000;
 var pinReaders = [];
 var pinWriters = [];
 let boilerStatus = true;
+let rmqConn;
 
 initPower();
 
@@ -130,26 +131,20 @@ function getGpioReader(pin) {
 }
 
 function subscribeWritersToRMQ() {
-  amqp.connect(`amqp://${RMQ_IP}`, function (err, conn) {
-    setTimeout(function () {
-      handleError(err, conn, subscribeWritersToRMQ);
-    }, DELAY);
+  if (!rmqConn) {
+    rmqConn = amqp.connect([`amqp://${RMQ_IP}`])
+  };
 
-    if (conn) {
-      conn.createChannel(function (err, ch) {
-        var q = `Power_Write:${nodeId}`;
-
-        ch.assertQueue(q, {
+  rmqConn.createChannel({
+    setup: function (channel) {
+      return Promise.all([
+        channel.assertQueue(`Power_Write:${nodeId}`, {
           durable: false
-        });
-
-        ch.consume(q, function (msg) {
-          console.log(" [x] Received From Home Server to Power Write %s", msg.content.toString());
-          receiveFromRmqToWrite(bin2string(msg.content));
-        }, {
+        }),
+        channel.consume(`Power_Write:${nodeId}`, receiveFromRmqToWrite(bin2string(msg.content)), {
           noAck: true
-        });
-      });
+        })
+      ])
     }
   });
 }
@@ -182,24 +177,22 @@ function changeStatusAndSendToRmq(model) {
 }
 
 function sendToRmq(msg) {
-  amqp.connect(`amqp://${RMQ_IP}`, function (err, conn) {
-
-    if (!conn) exit();
-    conn.createChannel(function (err, ch) {
-      var q = 'Server';
-
-      ch.assertQueue(q, {
+  let rmqChannel = rmqConn.createChannel({
+    setup: function (channel) {
+      return channel.assertQueue('Server', {
         durable: false
-      });
-
-      ch.sendToQueue(q, new Buffer.from(msg));
-      console.log(" [x] Sent Message to Home Server:" + msg);
-
-      setTimeout(function () {
-        conn.close();
-      }, 250);
-    });
+      })
+    }
   });
+
+  rmqChannel.sendToQueue('Server', new Buffer.from(msg))
+    .then(function () {
+      rmqChannel.close();
+      return console.log(" [AMQPv4] Sent Message to Home Server:" + msg);
+    }).catch(function (err) {
+      rmqChannel.close();
+      return console.log(" [AMQPv4] Rejected Message to Home Server:" + msg);
+    });
 }
 
 function blink(status, id) {
@@ -253,36 +246,5 @@ process.on('SIGUSR2', exitHandler.bind(null, {
 process.on('uncaughtException', exitHandler.bind(null, {
   exit: true
 }));
-
-
-function handleError(err, conn, watchCallback) {
-  console.log(`[AMQP] New conncetion with errors |${err ? err : ''}`);
-
-  if (conn) {
-    console.log(
-      `[AMQP] Connected with callback ${watchCallback
-        .toString()
-        .substring(0, 21)}`
-    );
-
-    conn.on('error', function (err) {
-      console.error('[AMQP CONN ERROR]', err.message);
-    });
-
-    conn.on('close', function (err) {
-      console.error('[AMQP ON CLOSE] code: ', err.code);
-      if (err.code.includes('ECONNRESET')) {
-        console.log('[AMQP ON RECONNECT]');
-        conn.close();
-        watchCallback();
-      }
-    });
-  } else {
-    if (err) {
-      console.error('[AMQP NO CONN ERROR]', err.message);
-      watchCallback();
-    }
-  }
-}
 
 // #endregion

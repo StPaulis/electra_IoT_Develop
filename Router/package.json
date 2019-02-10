@@ -13,6 +13,7 @@
     "nodejs"
   ],
   "dependencies": {
-    "amqplib": "^0.5.2"
+    "amqp-connection-manager": "^2.3.0",
+    "amqplib": "^0.5.3"
   }
 }

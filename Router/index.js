@@ -1,19 +1,14 @@
-var amqp = require('amqplib/callback_api');
+var amqp = require('amqp-connection-manager');
 
 const DELAY = 3000;
 const RMQ_IP = process.env.RMQ_IP || '192.168.1.30';
 const DEVICE_NAME = process.env.DEVICE_NAME || 'ControlPowerWithAzure';
-const RMQ_IPV6 = process.env.RMQ_IPV6 || 'localhost';
-const RMQ_PASSWORD = process.env.RMQ_PASSWORD || 'guest';
-const RMQ_USERNAME = process.env.RMQ_USERNAME || 'guest';
-const amqv6Options = {
-  protocol: 'amqp',
-  hostname: RMQ_IPV6,
-  port: 5672,
-  username: RMQ_USERNAME,
-  password: RMQ_PASSWORD,
-  vhost: '/'
-};
+const RMQ_IPV6 = process.env.RMQ_IPV6 || '192.168.1.10';
+const RMQ_PASSWORD = process.env.RMQ_PASSWORD || 'gest';
+const RMQ_USERNAME = process.env.RMQ_USERNAME || 'gest';
+
+let cloudConn;
+let homeConn;
 
 process.on('uncaughtException', err => {
   console.error('UnCaught', err);
@@ -23,162 +18,116 @@ process.on('uncaughtException', err => {
   }, DELAY);
 });
 
+
+// #region Main() 
 watchCloud();
 watchHome();
+// #endregion
 
 function watchCloud() {
-  amqp.connect(amqv6Options, function (err, conn) {
-    setTimeout(function () {
-      handleError(err, conn, watchCloud);
-    }, DELAY);
-    if (conn) {
-      conn.createChannel(function (err, ch) {
-        var q = DEVICE_NAME;
-
-        ch.assertQueue(q, {
-          durable: true
-        });
-        ch.prefetch(1);
-        ch.consume(
-          q,
-          function (msg) {
-            const bufferedData = msg.content;
-            let model = JSON.parse(bin2string(bufferedData));
-            if (
-              model.Expiring &&
-              Math.floor(Date.now() / 1000) < +model.Expiring
-            ) {
-              console.log('[From Cloud To Router]:' + bin2string(bufferedData));
-              sendToHome(bin2string(bufferedData));
-            } else {
-              console.log(
-                `[Error] Job is late || (Now: ${Math.floor(
-                  Date.now() / 1000
-                )} > Expiring: ${+model.Expiring})`
-              );
-            }
-          }, {
-            noAck: true
+  if (!cloudConn)
+    cloudConn = amqp.connect([`amqp://${RMQ_USERNAME}:${RMQ_PASSWORD}@${RMQ_IPV6}`]);
+  cloudConn.createChannel({
+    setup: function (channel) {
+      return Promise.all([
+        channel.assertQueue(DEVICE_NAME, {
+          durable: true,
+          prefetch: 1
+        }),
+        channel.consume(DEVICE_NAME, function (msg) {
+          const bufferedData = msg.content;
+          let model = JSON.parse(bin2string(bufferedData));
+          if (
+            model.Expiring &&
+            Math.floor(Date.now() / 1000) < +model.Expiring
+          ) {
+            console.log('[From Cloud To Router]:' + bin2string(bufferedData));
+            sendToHome(bin2string(bufferedData));
+          } else {
+            console.log(
+              `[Error] Job is late || (Now: ${Math.floor(
+                Date.now() / 1000
+              )} > Expiring: ${+model.Expiring})`
+            );
           }
-        );
-      });
-    } else {
-      setTimeout(function () {
-        watchCloud;
-      }, DELAY);
+        }, {
+          noAck: true
+        })
+      ])
     }
   });
 }
 
 function watchHome() {
-  amqp.connect(`amqp://${RMQ_IP}`, function (err, conn) {
-    setTimeout(function () {
-      handleError(err, conn, watchHome);
-    }, DELAY);
-    if (conn) {
-      conn.createChannel(function (err, ch) {
-        var q = 'Server';
-
-        ch.assertQueue(q, {
+  if (!homeConn)
+    homeConn = amqp.connect([`amqp://guest:guest@${RMQ_IP}`]);
+  homeConn.createChannel({
+    setup: function (channel) {
+      return Promise.all([
+        channel.assertQueue('Server', {
           durable: false
-        });
-        // Note: on Node 6 Buffer.from(msg) should be used
-        ch.consume(
-          q,
-          function (msg) {
-            console.log(
-              ' [Received To Router from Home] %s',
-              msg.content.toString()
-            );
-            SendToCloud(msg.content);
-          }, {
-            noAck: true
-          }
-        );
-      });
+        }),
+        channel.consume('Server', function (msg) {
+          console.log(
+            ' [Received To Router from Home] %s',
+            msg.content.toString()
+          );
+          SendToCloud(msg.content);
+        }, {
+          noAck: true
+        })
+      ])
     }
   });
 }
 
-// Helpers
 function SendToCloud(bytes) {
-  amqp.connect(`amqp://${RMQ_USERNAME}:${RMQ_PASSWORD}@${RMQ_IPV6}`, function (
-    err,
-    conn
-  ) {
-    conn.createChannel(function (err, ch) {
-      var q = 'Cloud';
-
-      ch.assertQueue(q, {
+  let cloudChannel = cloudConn.createChannel({
+    setup: function (channel) {
+      return channel.assertQueue('Cloud', {
         durable: true
-      });
-      ch.sendToQueue(q, new Buffer(bytes), {
-        persistent: true
-      });
-      console.log(" [Sent to Cloud] Sent '%s'", bytes);
-    });
-
-    setTimeout(function () {
-      conn.close();
-    }, 500);
+      })
+    }
   });
+
+  cloudChannel.sendToQueue('Cloud', bytes, {
+      persistent: true
+    })
+    .then(function () {
+      cloudChannel.close();
+      return console.log(" [Sent to Cloud] Sent '%s'", bytes);
+    }).catch(function (err) {
+      cloudChannel.close();
+      return console.log(" [Sent to Cloud] Rejected '%s'", bytes);
+    });
 }
 
 function sendToHome(msg) {
-  amqp.connect(`amqp://${RMQ_IP}`, function (err, conn) {
-    conn.createChannel(function (err, ch) {
-      var q = '';
-
-      try {
-        q = JSON.parse(msg).Service;
-      } catch (error) {
-        console.log(error);
-      }
-
-      ch.assertQueue(q, {
-        durable: false
-      });
-      // Note: on Node 6 Buffer.from(msg) should be used
-      ch.sendToQueue(q, new Buffer.from(msg));
-      console.log(`[Router to Home] Sent '${msg}' to ${q}:`);
-
-      setTimeout(function () {
-        conn.close();
-      }, 500);
-    });
-  });
-}
-
-function handleError(err, conn, watchCallback) {
-  console.log(`[AMQP] New conncetion with errors |${err ? err : ''}`);
-
-  if (conn) {
-    console.log(
-      `[AMQP] Connected with callback ${watchCallback
-        .toString()
-        .substring(0, 21)}`
-    );
-
-    conn.on('error', function (err) {
-      console.error('[AMQP CONN ERROR]', err.message);
-    });
-
-    conn.on('close', function (err) {
-      console.error('[AMQP ON CLOSE] code: ', err.code);
-      if (err.code.includes('ECONNRESET')) {
-        console.log('[AMQP ON RECONNECT]');
-        conn.close();
-        watchCallback();
-      }
-    });
-  } else {
-    if (err) {
-      console.error('[AMQP NO CONN ERROR]', err.message);
-      watchCallback();
-    }
+  try {
+    q = JSON.parse(msg).Service;
+  } catch (error) {
+    console.log(error);
   }
+
+  let homeChannel = homeConn.createChannel({
+    setup: function (channel) {
+      return channel.assertQueue(q, {
+        durable: false
+      })
+    }
+  });
+
+  homeChannel.sendToQueue(q, new Buffer.from(msg))
+    .then(function () {
+      homeChannel.close();
+      return console.log(`[Router to Home] Sent '${msg}' to ${q}:`);
+    }).catch(function (err) {
+      homeChannel.close();
+      return console.log(`[Router to Home] Rejected '${msg}' to ${q}:`);
+    });
 }
 
+// Helpers
 function bin2string(array) {
   var result = '';
 
