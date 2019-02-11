@@ -9,14 +9,14 @@ const IS_PROD = process.env.IS_PROD || false;
 var pinReaders = [];
 var pinWriters = [];
 let boilerStatus = true;
-let rmqConn;
+let rmqConn = null;
 
 initPower();
 
 function initPower() {
   axios.get(`http://${server_url}/api/NodePin/node/${nodeId}/write`)
     .then(function (response) {
-      console.log('Writer Initial data:' + JSON.stringify(response.data));
+      console.log('[Power Write] Init:' + JSON.stringify(response.data));
       response.data.forEach(function (nodePin) {
 
         if (IS_PROD) {
@@ -46,15 +46,15 @@ function initPower() {
       subscribeWritersToRMQ();
     })
     .catch(function (error) {
-      console.log('Killing service while init... ' + error);
-      exit();
+      console.log('[Power Write] Restarting service on init' + error);
+      initPower();
     });
 
   function initPowerRead() {
 
     axios.get(`http://${server_url}/api/NodePin/node/${nodeId}/read`)
       .then(function (response) {
-        console.log('Reader Initial data:' + JSON.stringify(response.data));
+        console.log('[Power Read] Init:' + JSON.stringify(response.data));
         response.data.forEach(function (nodePin) {
           pinReaders.push({
             gpio: getGpioReader(nodePin),
@@ -76,8 +76,8 @@ function initPower() {
         });
       })
       .catch(function (error) {
-        console.log('Killing service while init reading...' + error);
-        exit();
+        console.log('[Power Read] Restarting service on init' + error);
+        initPowerRead();
       });
   }
 }
@@ -222,7 +222,13 @@ function exit() {
   if (IS_PROD && pinWriters) {
     pinWriters.forEach(x => x.gpio.unexport());
   }
-  process.exit(0);
+
+  if (rmqConn) {
+    rmqConn.close();
+    rmqConn = null;
+  }
+
+  initPower();
 }
 
 //do something when app is closing
