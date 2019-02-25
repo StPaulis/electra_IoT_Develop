@@ -8,9 +8,6 @@ services:
       - "5672"
     depends_on:
       - RabbitMQ 
-  SpotifyClient:
-    build: ./SpotifyClient
-    privileged: true
   Power:
     build: ./Power
     privileged: true
