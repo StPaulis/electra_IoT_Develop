@@ -1,6 +1,6 @@
-FROM resin/raspberrypi3-debian
+FROM resin/%%BALENA_MACHINE_NAME%%-debian
 
-RUN sudo apt-get update
+RUN sudo apt-get update && apt-get install -y apt-transport-https
 # Install curl and https apt transport
 RUN sudo apt-get -y install curl apt-transport-https
 RUN sudo apt-get install -y build-essential
@@ -14,7 +14,7 @@ RUN curl -sSL https://dtcooper.github.io/raspotify/key.asc | sudo apt-key add -v
 RUN echo 'deb https://dtcooper.github.io/raspotify jessie main' | sudo tee /etc/apt/sources.list.d/raspotify.list
 
 # Install package
-RUN sudo apt-get update
+RUN sudo apt-get update && apt-get install -y apt-transport-https
 RUN sudo apt-get -y install raspotify 
  
 # Defines our working directory in container 

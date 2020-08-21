@@ -1,20 +1,31 @@
 version: '2.1'
+volumes:
+  electra-data:
 services:
   Router:
     build: ./Router
     privileged: true
     network_mode: "host"
-    expose: 
-      - "5672"
     depends_on:
-      - RabbitMQ 
+      - RabbitMQ
+    labels:
+      io.balena.features.supervisor-api: '1'  
   Power:
     build: ./Power
     privileged: true
     network_mode: "host"
+    volumes:
+      - 'electra-data:/data'
     depends_on:
       - RabbitMQ
+    labels:
+      io.balena.features.supervisor-api: '1'         
   RabbitMQ:
-    build: ./RabbitMQ
+    image: "arm32v7/rabbitmq:3.8-management"
     network_mode: "host"
     privileged: true
+    expose: 
+      - "5672"
+      - "15672"
+    labels:
+      io.balena.features.supervisor-api: '1'

@@ -1,4 +1,4 @@
-FROM resin/raspberrypi3-node:6
+FROM resin/%%BALENA_MACHINE_NAME%%-node:6
 
 # use apt-get if you need to install dependencies,
 # for instance if you need ALSA sound utils, just uncomment the lines below.
