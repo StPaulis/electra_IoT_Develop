@@ -6,6 +6,7 @@ services:
     build: ./Router
     privileged: true
     network_mode: "host"
+    restart: "always"
     depends_on:
       - RabbitMQ
     labels:
@@ -14,6 +15,7 @@ services:
     build: ./Power
     privileged: true
     network_mode: "host"
+    restart: "always"
     volumes:
       - 'electra-data:/data'
     depends_on:
@@ -24,6 +26,7 @@ services:
     image: "arm32v7/rabbitmq:3.8-management"
     network_mode: "host"
     privileged: true
+    restart: "always"
     expose: 
       - "5672"
       - "15672"
