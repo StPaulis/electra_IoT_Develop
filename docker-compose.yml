@@ -1,6 +1,7 @@
 version: '2.1'
 volumes:
   electra-data:
+  electra-browser-settings:
 services:
   Router:
     build: ./Router
@@ -30,5 +31,23 @@ services:
     expose: 
       - "5672"
       - "15672"
+    labels:
+      io.balena.features.supervisor-api: '1'
+  Browser:
+    build: ./Browser
+    privileged: true 
+    network_mode: host
+    restart: "always"
+    depends_on:
+      - Power
+    environment:
+      PERSISTENT: 1
+      LAUNCH_URL: 'https://electra.iot-design.gr'
+      KIOSK: 1
+      SHOW_CURSOR: 1
+      ENABLE_GPU: 1
+      FLAGS: '--enable-touchview=1 --enable-viewport=1 --enable-virtual-keyboard=1 --has-chromeos-keyboard=1'
+    volumes:
+      - 'electra-browser-settings:/data'
     labels:
       io.balena.features.supervisor-api: '1'
