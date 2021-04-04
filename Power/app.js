@@ -58,8 +58,9 @@ function initPower() {
           relayKastaniasInfoList.push({ pin: nodePin.controllerPin, status: nodePin.status });
           console.log('[Power] Set up pin ' + nodePin.controllerPin + ' as Rele Kastanias with status ' + nodePin.status + '!');
         }
+
         console.log('[Power] Initializing pin ' + nodePin.controllerPin + ' status: ' + nodePin.status + '...');
-        blink(nodePin.status, nodePin.controllerPin);
+        triggerPin(nodePin.status, nodePin.controllerPin);
         console.log('[Power] Pin ' + nodePin.controllerPin + ' initialized with status: ' + nodePin.status + '!');
 
         console.log('[Power] Get paused jobs from storage for pin ' + nodePin.controllerPin + '...');
@@ -71,7 +72,7 @@ function initPower() {
           const fireAt = job.time - nowInEpoch;
           setTimeout(() => {
             removeJobFromStorage(nodePin.controllerPin);
-            receiveFromRmqToWrite(JSON.stringify(
+            onReceiveFromRmqToWrite(JSON.stringify(
               {
                 Id: nodePin.controllerPin,
                 Status: job.status,
@@ -108,7 +109,7 @@ function initPower() {
         response.data.forEach(function (nodePin) {
           console.log('[Power] Setting up pin ' + nodePin + ' as Input...');
           pinReaders.push({
-            gpio: getGpioReader(nodePin),
+            gpio: createReader(nodePin),
             status: 0,
             pin: nodePin
           });
@@ -118,14 +119,14 @@ function initPower() {
           const _status = pinReaders.find(x => x.pin === nodePin).gpio.readSync();
           pinReaders.find(x => x.pin === nodePin).status = _status;
 
-          changeStatusAndSendToRmq({
+          onReaderStatusChanged({
             id: nodePin,
             status: _status === 1 ? true : false,
             service: 'Power_Read',
             nodeId: nodeId
           });
 
-          initGpioReader(pinReaders.find(x => x.pin === nodePin).gpio);
+          watchReader(pinReaders.find(x => x.pin === nodePin).gpio);
           console.log('[Power] Read status from device pin ' + nodePin + ' and sent to RabbitMq!');
         });
       })
@@ -144,16 +145,16 @@ function handleWrite(model) {
     }
     var releStatus = relayKastaniasInfoList.find(x => x.pin == model.Id).status;
     console.log('[Power] Set Kastania Pin ' + model.Id + ' as ' + !releStatus);
-    blink(!releStatus, model.Id);
+    triggerPin(!releStatus, model.Id);
 
     setTimeout(function () {
       console.log('[Power] Set Kastania Pin ' + model.Id + ' as ' + releStatus);
-      blink(releStatus, model.Id);
+      triggerPin(releStatus, model.Id);
     }, Relay_Delay);
 
   } else {
     console.log('[Power] Set Pin ' + model.Id + ' as ' + model.Status);
-    blink(model.Status, model.Id);
+    triggerPin(model.Status, model.Id);
   }
 
   if (model.ClosedinMilliseconds) {
@@ -164,12 +165,12 @@ function handleWrite(model) {
       model.ClosedinMilliseconds = 0;
       console.log(`[Power]: Auto Close Triggered for Pin ${model.Id} to ${!model.Status} `);
       removeJobFromStorage(model.Id);
-      receiveFromRmqToWrite(JSON.stringify(model));
+      onReceiveFromRmqToWrite(JSON.stringify(model));
     }, model.ClosedinMilliseconds);
   }
 }
 
-function initGpioReader(gpio) {
+function watchReader(gpio) {
   gpio.watch((err, value) => {
     if (err) {
       console.log(err);
@@ -177,7 +178,7 @@ function initGpioReader(gpio) {
     }
 
     console.log(`Pin ${gpio._gpio} changed, New value: ${value}`);
-    changeStatusAndSendToRmq({
+    onReaderStatusChanged({
       id: gpio._gpio,
       status: value === 1 ? true : false,
       service: 'Power_Read',
@@ -186,7 +187,7 @@ function initGpioReader(gpio) {
   });
 }
 
-function getGpioReader(pin) {
+function createReader(pin) {
   if (IS_PROD) {
     return new Gpio(pin, 'in', 'both', 'both');
   } else {
@@ -217,7 +218,7 @@ function subscribeWritersToRMQ() {
           durable: false
         }),
         channel.consume(`Power_Write:${nodeId}`, function (msg) {
-          receiveFromRmqToWrite(bin2string(msg.content));
+          onReceiveFromRmqToWrite(bin2string(msg.content));
         }, {
           noAck: true
         })
@@ -226,7 +227,7 @@ function subscribeWritersToRMQ() {
   });
 }
 
-function receiveFromRmqToWrite(msg) {
+function onReceiveFromRmqToWrite(msg) {
   var model = JSON.parse(msg);
 
   try {
@@ -242,7 +243,7 @@ function receiveFromRmqToWrite(msg) {
   sendToRmq(newMsg);
 }
 
-function changeStatusAndSendToRmq(model) {
+function onReaderStatusChanged(model) {
 
   const _LastStatus = pinReaders.filter(x => x.pin === model.id)[0].status;
   if (model.status === _LastStatus) return;
@@ -272,7 +273,7 @@ function sendToRmq(msg) {
     });
 }
 
-function blink(status, id) {
+function triggerPin(status, id) {
   console.log('[Power] Triggering pin ' + id + ' as ' + status + '...');
   pinWriters.find(x => x.pin === id).gpio.writeSync(status ? 1 : 0);
   console.log('[Power] Trigger pin ' + id + ' as ' + status + '!');
