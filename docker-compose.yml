@@ -37,7 +37,7 @@ services:
     build: ./Browser
     privileged: true 
     network_mode: host
-    restart: "always"
+    restart: "no"
     depends_on:
       - Power
     environment:
